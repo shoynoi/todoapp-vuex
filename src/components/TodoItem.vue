@@ -9,6 +9,8 @@
                @blur="doneEditContent"
                @keydown.enter="doneEditContent"
                @keyup.esc="cancelEditContent"
+               @compositionstart="composing = true"
+               @compositionend="composing = false"
                :value="todo.content"
                v-todo-focus="todo === editedContent">
       </td>
@@ -22,8 +24,7 @@
                @keyup.esc="cancelEditDeadline"
                :value="todo.deadline"
                :min="today()"
-               v-todo-focus="todo === editedDeadline"
-               >
+               v-todo-focus="todo === editedDeadline">
       </td>
       <td class="status">
         <button @click="changeStatus(todo)"><slot></slot></button>
@@ -47,6 +48,7 @@
       return {
         editedContent: '',
         editedDeadline: '',
+        composing: false
       }
     },
     methods: {
@@ -61,14 +63,14 @@
         this.beforeEditCache = this.todo.deadline;
         this.editedDeadline = this.todo;
       },
-      doneEditContent: function (event) {
-        if (event.key !== "Enter" && event.type !== 'blur') return;
-        if (!this.editedContent) return;
-        this.editedContent = null;
-        const content = event.target.value.trim();
-        this.$store.dispatch('editContent', { todo: this.todo, content: content });
-        if (!content) {
-          this.cancelEditContent()
+      doneEditContent(event) {
+        if (!this.composing) {
+            this.editedContent = null;
+            const content = event.target.value.trim();
+            this.$store.dispatch('editContent', { todo: this.todo, content: content });
+            if (!content) {
+              this.cancelEditContent()
+            }
         }
       },
       cancelEditContent() {
