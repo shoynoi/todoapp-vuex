@@ -6,21 +6,30 @@
       </TodoFilter>
       <TodoSort @sort="sortTodos"></TodoSort>
     </div>
-    <TodoItem :computedTodos="computedTodos"/>
+    <table>
+      <thead>
+      <tr>
+        <th class="id">ID</th>
+        <th class="todo">TODO</th>
+        <th class="deadline">期日</th>
+        <th class="status">状態</th>
+        <th class="button">-</th>
+      </tr>
+      </thead>
+      <tbody>
+      <TodoItem v-for="todo in computedTodos" :key="todo.id" :todo="todo">{{ labels[todo.status] }}</TodoItem>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script>
-  import moment from "moment"
   import TodoItem from "./TodoItem";
   import TodoFilter from "./TodoFilter";
   import TodoSort from "./TodoSort";
 
   export default {
     name: 'TodoList',
-    props: {
-      todos: Array
-    },
     data() {
       return {
         options: [
@@ -31,40 +40,58 @@
         current: -1,
       }
     },
+    methods: {
+      sortTodos(sortOrder) {
+        this.$store.dispatch('sortTodos', sortOrder)
+      }
+    },
     computed: {
       computedTodos() {
-        return this.todos.filter(function (todo) {
-          return this.current < 0 ? true : this.current === todo.state
+        return this.$store.state.todos.filter(function (todo) {
+          return this.current < 0 ? true : this.current === todo.status
         }, this);
       },
+      labels() {
+        return this.options.reduce(function (a, b) {
+          return Object.assign(a, { [ b.value ]: b.label })
+        }, {})
+      }
     },
     components: {
       TodoItem,
       TodoFilter,
       TodoSort
     },
-    methods: {
-      // TODO TodoSort.vueにあるべき?
-      sortTodos(sortOrder) {
-        if (sortOrder === 1) {
-          return this.todos.sort((a, b) => a.id - b.id)
-        } else if (sortOrder === 2) {
-          return this.todos.sort(function (a, b) {
-            if (a.deadline === '') return 1;
-            if (b.deadline === '') return -1;
-            if (a.deadline === b.deadline) return 0;
-            return moment(a.deadline).diff(moment(b.deadline))
-          })
-        }
-      },
-    }
   }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
   .search {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2em;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    border-bottom: 2px solid #0099e4; /*#d31c4a */
+    color: #0099e4;
+  }
+
+  thead th.id {
+    width: 50px;
+  }
+
+  thead th.status {
+    width: 100px;
+  }
+
+  thead th.button {
+    width: 60px;
   }
 </style>

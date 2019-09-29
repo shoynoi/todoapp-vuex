@@ -25,5 +25,7 @@
 </script>
 
 <style scoped>
-
+  .condition label {
+    padding-left: .3em;
+  }
 </style>

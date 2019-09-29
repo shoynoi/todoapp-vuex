@@ -10,7 +10,6 @@
 </template>
 
 <script>
-
   export default {
     name: "TodoSort",
     data() {
@@ -22,20 +21,6 @@
         ]
       }
     },
-    methods: {
-      // sortTodos(sortOrder) {
-      //   if (sortOrder === 1) {
-      //     return this.todos.sort((a, b) => a.id - b.id)
-      //   } else if (sortOrder === 2) {
-      //     return this.todos.sort(function (a, b) {
-      //       if (a.deadline === '') return 1;
-      //       if (b.deadline === '') return -1;
-      //       if (a.deadline === b.deadline) return 0;
-      //       return moment(a.deadline).diff(moment(b.deadline))
-      //     })
-      //   }
-      // },
-    }
   }
 </script>
 

@@ -1,57 +1,47 @@
 <template>
-  <table>
-    <thead>
-    <tr>
-      <th class="id">ID</th>
-      <th class="todo">TODO</th>
-      <th class="deadline">期日</th>
-      <th class="state">状態</th>
-      <th class="button">-</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr v-for="todo in computedTodos" :key="todo.id" :class="{ done: todo.state }">
+    <tr :class="{ done: todo.status }">
       <th>{{ todo.id }}</th>
       <td class="td-content" :class="{ editingContent: todo === editedContent }">
         <div class="view">
-          <label @click="editTodo(todo)">{{ todo.content }}</label>
+          <label @click="editTodo">{{ todo.content }}</label>
         </div>
         <input type="text" class="edit"
-               @blur="doneEditContent($event, todo)"
-               @keydown.enter="doneEditContent($event, todo)"
-               @keyup.esc="cancelEditContent(todo)"
-               v-model="todo.content"
+               @blur="doneEditContent"
+               @keydown.enter="doneEditContent"
+               @keyup.esc="cancelEditContent"
+               :value="todo.content"
                v-todo-focus="todo === editedContent">
       </td>
-      <td class="deadline" v-bind:class="{ editingDeadline: todo === editedDeadline }">
+      <td class="deadline" :class="{ editingDeadline: todo === editedDeadline }">
         <div class="view">
-          <label @click="editDeadline(todo)">{{ todo.deadline | formatDeadline }}</label>
+          <label @click="editDeadline">{{ todo.deadline | formatDeadline }}</label>
         </div>
         <input type="date" class="edit"
-               @blur="doneEditDeadline($event)"
-               @keydown.enter="doneEditDeadline($event)"
-               @keyup.esc="cancelEditDeadline(todo)"
-               v-model="todo.deadline"
-               v-todo-focus="todo === editedDeadline">
+               @blur="doneEditDeadline"
+               @keydown.enter="doneEditDeadline"
+               @keyup.esc="cancelEditDeadline"
+               :value="todo.deadline"
+               :min="today()"
+               v-todo-focus="todo === editedDeadline"
+               >
       </td>
-      <td class="state">
-        <button @click="doChangeState(todo)">{{ labels[todo.state] }}</button>
+      <td class="status">
+        <button @click="changeStatus(todo)"><slot></slot></button>
       </td>
       <td class="button">
-        <button @click="doRemove(todo)">削除</button>
+        <button @click="removeTodo(todo)">削除</button>
       </td>
     </tr>
-    </tbody>
-  </table>
 </template>
 
 <script>
-  import moment from "moment"
+  import { mapActions } from 'vuex'
+  import date from "./date";
 
   export default {
     name: "TodoItem",
     props: {
-      computedTodos: Array
+      todo: Object,
     },
     data() {
       return {
@@ -60,35 +50,42 @@
       }
     },
     methods: {
-      editTodo: function (todo) {
-        if (todo.state === 1) return;
-        this.beforeEditCache = todo.content;
-        this.editedContent = todo
+      ...mapActions(['changeStatus', 'removeTodo']),
+      editTodo() {
+        if (this.todo.status === 1) return;
+        this.beforeEditCache = this.todo.content;
+        this.editedContent = this.todo
       },
-      editDeadline: function (todo) {
-        if (todo.state === 1) return;
-        this.beforeEditCache = todo.deadline;
-        this.editedDeadline = todo;
+      editDeadline() {
+        if (this.todo.status === 1) return;
+        this.beforeEditCache = this.todo.deadline;
+        this.editedDeadline = this.todo;
       },
-    },
-    computed: {
-      labels: function () {
-        return this.options.reduce(function (a, b) {
-          return Object.assign(a, { [ b.value ]: b.label })
-        }, {})
-      }
-    },
-    filters: {
-      formatDeadline: function (val) {
-        const date = moment(val);
-        if (val === '') {
-          return 'なし'
-        } else if (date.year() === moment().year()) {
-          return date.format('M月D日')
-        } else {
-          return date.format('YYYY年M月D日')
+      doneEditContent: function (event) {
+        if (event.key !== "Enter" && event.type !== 'blur') return;
+        if (!this.editedContent) return;
+        this.editedContent = null;
+        const content = event.target.value.trim();
+        this.$store.dispatch('editContent', { todo: this.todo, content: content });
+        if (!content) {
+          this.cancelEditContent()
         }
-      }
+      },
+      cancelEditContent() {
+        this.editedContent = null;
+        this.todo.content = this.beforeEditCache
+      },
+      doneEditDeadline(event) {
+        if (event.key !== "Enter" && event.type !== 'blur') return;
+        if (!this.editedDeadline) return;
+        this.editedDeadline = null;
+        const deadline = event.target.value;
+        this.$store.dispatch('editDeadline', { todo: this.todo, deadline: deadline })
+      },
+      cancelEditDeadline() {
+        this.editedDeadline = null;
+        this.todo.deadline = this.beforeEditCache
+      },
     },
     directives: {
       'todo-focus': function (el, binding) {
@@ -96,65 +93,41 @@
           el.focus()
         }
       }
-    }
+    },
+    mixins: [date]
   }
 </script>
 
 <style scoped>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  thead th {
-    border-bottom: 2px solid #0099e4; /*#d31c4a */
-    color: #0099e4;
-  }
-
   th, th {
     padding: 0 8px;
     line-height: 40px;
   }
 
-  thead th.id {
-    width: 50px;
-  }
-
-  thead th.state {
-    width: 100px;
-  }
-
-  thead th.button {
-    width: 60px;
-  }
-
-  tbody td.button, tbody td.state {
+  td.button, td.status {
     text-align: center;
   }
 
-  tbody tr td,
-  tbody tr th {
+  tr td, tr th {
     border-bottom: 1px solid #ccc;
     transition: all 0.4s;
   }
 
-  tbody tr.done td,
-  tbody tr.done th {
+  tr.done td, tr.done th {
     background: #f8f8f8;
     color: #bbb;
   }
 
-  tbody tr:hover td,
-  tbody tr:hover th {
+  tr:hover td, tr:hover th {
     background: #f4fbff;
   }
 
-  tbody tr td.deadline {
+  tr td.deadline {
     text-align: center;
     width: 10em;
   }
 
-  tbody button {
+   button {
     border: none;
     border-radius: 20px;
     line-height: 24px;
@@ -202,5 +175,4 @@
   .view label:empty {
     display: block;
   }
-
 </style>
